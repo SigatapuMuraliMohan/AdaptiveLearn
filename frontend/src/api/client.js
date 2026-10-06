@@ -24,6 +24,7 @@ api.interceptors.response.use(
   (error) => {
     if (error.response && error.response.status === 401) {
       localStorage.removeItem('jwt_token');
+      localStorage.removeItem('user_data');
       localStorage.removeItem('user_info');
       if (window.location.pathname !== '/login' && window.location.pathname !== '/register' && window.location.pathname !== '/') {
         window.location.href = '/login';

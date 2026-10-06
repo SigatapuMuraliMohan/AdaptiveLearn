@@ -50,7 +50,8 @@ const OnboardingWizard = () => {
         }
       });
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to initialize onboarding profile.');
+      const msg = err.response?.data?.message || err.response?.data?.error || err.message || 'Failed to initialize onboarding profile.';
+      setError(msg);
       setLoading(false);
     }
   };

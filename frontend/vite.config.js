@@ -13,5 +13,15 @@ export default defineConfig({
         secure: false
       }
     }
+  },
+  optimizeDeps: {
+    include: [
+      'lucide-react',
+      'react-markdown',
+      'remark-gfm',
+      'canvas-confetti',
+      'axios',
+      'react-router-dom'
+    ]
   }
 })

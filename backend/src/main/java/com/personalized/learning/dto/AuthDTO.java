@@ -90,4 +90,65 @@ public class AuthDTO {
         public String getNewPassword() { return newPassword; }
         public void setNewPassword(String newPassword) { this.newPassword = newPassword; }
     }
+
+    public static class SendOtpRequest {
+        @NotBlank(message = "Email is required")
+        @Email(message = "Invalid email format")
+        private String email;
+
+        public String getEmail() { return email; }
+        public void setEmail(String email) { this.email = email; }
+    }
+
+    public static class ResetPasswordWithOtpRequest {
+        @NotBlank(message = "Email is required")
+        @Email(message = "Invalid email format")
+        private String email;
+
+        @NotBlank(message = "OTP is required")
+        @Size(min = 6, max = 6, message = "OTP must be exactly 6 digits")
+        private String otp;
+
+        @NotBlank(message = "New password is required")
+        @Size(min = 6, message = "Password must be at least 6 characters")
+        private String newPassword;
+
+        public String getEmail() { return email; }
+        public void setEmail(String email) { this.email = email; }
+
+        public String getOtp() { return otp; }
+        public void setOtp(String otp) { this.otp = otp; }
+
+        public String getNewPassword() { return newPassword; }
+        public void setNewPassword(String newPassword) { this.newPassword = newPassword; }
+    }
+
+    public static class GenericResponse {
+        private boolean success;
+        private String message;
+
+        public GenericResponse(boolean success, String message) {
+            this.success = success;
+            this.message = message;
+        }
+
+        public boolean isSuccess() { return success; }
+        public String getMessage() { return message; }
+    }
+
+    public static class SendOtpResponse {
+        private boolean success;
+        private String message;
+        private String devOtpPreview;
+
+        public SendOtpResponse(boolean success, String message, String devOtpPreview) {
+            this.success = success;
+            this.message = message;
+            this.devOtpPreview = devOtpPreview;
+        }
+
+        public boolean isSuccess() { return success; }
+        public String getMessage() { return message; }
+        public String getDevOtpPreview() { return devOtpPreview; }
+    }
 }

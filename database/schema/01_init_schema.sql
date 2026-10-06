@@ -297,3 +297,15 @@ CREATE TABLE `admin_actions` (
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT `fk_audit_admin` FOREIGN KEY (`admin_user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 21. Password Reset OTPs
+CREATE TABLE IF NOT EXISTS `password_reset_otps` (
+    `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
+    `email` VARCHAR(150) NOT NULL,
+    `otp` VARCHAR(6) NOT NULL,
+    `expires_at` TIMESTAMP NOT NULL,
+    `used` BOOLEAN NOT NULL DEFAULT FALSE,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX `idx_otp_email` (`email`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+

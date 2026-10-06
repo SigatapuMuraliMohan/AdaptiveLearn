@@ -32,4 +32,14 @@ public class AuthController {
             @RequestBody AuthDTO.UpdateProfileRequest request) {
         return ResponseEntity.ok(authService.updateProfile(authentication.getName(), request));
     }
+
+    @PostMapping("/forgot-password/send-otp")
+    public ResponseEntity<AuthDTO.SendOtpResponse> sendPasswordResetOtp(@Valid @RequestBody AuthDTO.SendOtpRequest request) {
+        return ResponseEntity.ok(authService.sendPasswordResetOtp(request.getEmail()));
+    }
+
+    @PostMapping("/forgot-password/reset")
+    public ResponseEntity<AuthDTO.GenericResponse> resetPasswordWithOtp(@Valid @RequestBody AuthDTO.ResetPasswordWithOtpRequest request) {
+        return ResponseEntity.ok(authService.verifyOtpAndResetPassword(request));
+    }
 }

@@ -51,70 +51,12 @@ app.add_middleware(
 )
 
 # -------------------------------------------------------------------------
-# Real Scikit-Learn Predictive Risk Model Pipeline
+# Advanced AI / ML & Psychometric Engines
 # -------------------------------------------------------------------------
-class LearningRiskPredictor:
-    def __init__(self):
-        self.model = None
-        self._train_initial_model()
-
-    def _train_initial_model(self):
-        # Synthetic dataset modeling educational telemetry:
-        # Features: [completion_rate (0-1), average_score (0-100), days_inactive (0-30), missed_assessments (0-10), score_trend (-1 to 1)]
-        # Target: 0 = LOW RISK, 1 = MEDIUM RISK, 2 = HIGH RISK
-        np.random.seed(42)
-        X = np.array([
-            [0.85, 92.0, 0, 0, 0.2],   # 0: Low
-            [0.90, 88.0, 1, 0, 0.1],   # 0: Low
-            [0.75, 82.0, 2, 0, 0.05],  # 0: Low
-            [0.80, 85.0, 1, 0, 0.15],  # 0: Low
-            [0.55, 68.0, 3, 1, -0.05], # 1: Medium
-            [0.60, 64.0, 4, 1, -0.1],  # 1: Medium
-            [0.45, 70.0, 5, 1, 0.0],   # 1: Medium
-            [0.50, 62.0, 4, 2, -0.15], # 1: Medium
-            [0.20, 45.0, 8, 3, -0.3],  # 2: High
-            [0.15, 50.0, 10, 4, -0.4], # 2: High
-            [0.30, 40.0, 7, 2, -0.25], # 2: High
-            [0.10, 35.0, 14, 5, -0.5], # 2: High
-        ])
-        y = np.array([0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2])
-
-        self.pipeline = Pipeline([
-            ('scaler', StandardScaler()),
-            ('rf', RandomForestClassifier(n_estimators=50, random_state=42))
-        ])
-        self.pipeline.fit(X, y)
-        logger.info("Trained scikit-learn LearningRiskPredictor pipeline successfully.")
-
-    def predict(self, completion_rate: float, avg_score: float, days_inactive: int, missed_count: int, trend_slope: float):
-        features = np.array([[completion_rate, avg_score, days_inactive, missed_count, trend_slope]])
-        pred_class = self.pipeline.predict(features)[0]
-        proba = self.pipeline.predict_proba(features)[0]
-        
-        # Risk score corresponds to weighted probability of Medium (idx 1) + High (idx 2)
-        risk_score = float(proba[1] * 0.5 + proba[2] * 1.0)
-        
-        risk_level_map = {0: "LOW", 1: "MEDIUM", 2: "HIGH"}
-        risk_level = risk_level_map.get(pred_class, "LOW")
-
-        factors = []
-        if completion_rate < 0.4:
-            factors.append(f"Low completion pace ({int(completion_rate * 100)}%)")
-        if avg_score < 65:
-            factors.append(f"Assessment score below benchmark ({round(avg_score, 1)}%)")
-        if days_inactive >= 3:
-            factors.append(f"Inactivity detected ({days_inactive} days since last session)")
-        if missed_count > 0:
-            factors.append(f"{missed_count} missed/unattempted quiz checkpoint(s)")
-        if trend_slope < -0.1:
-            factors.append("Declining performance trend across recent milestones")
-
-        if not factors:
-            factors.append("Steady learning velocity and strong mastery retention")
-
-        return risk_level, round(risk_score, 2), factors
-
-risk_predictor = LearningRiskPredictor()
+from app.ml.risk_engine import risk_predictor
+from app.ml.bkt_engine import bkt_engine
+from app.ml.cat_engine import cat_engine
+from app.rag.vector_store import rag_store
 
 @app.get("/health")
 def health_check():
@@ -123,25 +65,36 @@ def health_check():
         "service": "ai-service",
         "provider": settings.LLM_PROVIDER,
         "model": settings.GEMINI_MODEL,
-        "ml_pipeline": "scikit-learn RandomForestClassifier"
+        "ml_capabilities": [
+            "Scikit-Learn Random Forest Dropout Risk + SHAP XAI",
+            "Bayesian Knowledge Tracing (BKT) Latent Mastery Engine",
+            "RAG Vector Store with Hybrid BM25 Search & Verified Citations",
+            "2PL Computerized Adaptive Testing (CAT) via Item Response Theory"
+        ]
     }
 
 # 1. Structured Socratic AI Tutor Chat with Memory Context
 @app.post("/ai/chat", response_model=ChatResponse)
 async def chat_with_tutor(req: ChatRequest):
     try:
+        rag_context, citations = rag_store.augment_prompt_with_citations(req.topic_name, req.message)
         system_instruction = STRUCTURED_TUTOR_PROMPT.format(
             topic_name=req.topic_name,
             current_level=req.current_level,
             learning_style=req.learning_style or "hands-on with analogies",
             weak_skills=req.weak_skills if req.weak_skills else ["None identified"],
             recent_mistakes=req.recent_mistakes if req.recent_mistakes else ["None recorded"]
-        )
+        ) + rag_context
+
         reply = await llm_adapter.generate_chat_text(
             system_instruction=system_instruction,
             user_message=req.message,
             history=req.conversation_history
         )
+
+        if citations:
+            reply = reply + f"\n\n> 📚 **Verified Technical Source**: *{citations[0]}*"
+
         return ChatResponse(
             reply=reply,
             suggested_followups=[
@@ -316,34 +269,94 @@ async def get_recommendation(req: RecommendationRequest):
         logger.error(f"Recommendation error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-# 9. Predictive Risk Model (Real Scikit-Learn Pipeline)
+# 9. Predictive Risk Model (Real Scikit-Learn Pipeline with SHAP Explainability)
 @app.post("/ai/predict-risk", response_model=RiskPredictionResponse)
 async def predict_learning_risk(req: RiskPredictionRequest):
     try:
-        risk_level, risk_score, factors = risk_predictor.predict(
-            completion_rate=req.completion_rate,
-            avg_score=req.average_assessment_score,
-            days_inactive=req.days_since_last_active,
-            missed_count=req.missed_assessments_count,
-            trend_slope=req.score_trend_slope
-        )
-
-        intervention = "Student is progressing smoothly."
-        if risk_level == "HIGH":
-            intervention = "High dropout risk detected. Recommend adaptive path simplification, targeted remedial drills, and scheduled mentor check-ins."
-        elif risk_level == "MEDIUM":
-            intervention = "Moderate risk. Offer extra analogies, progressive hints, and a recap session before the next milestone."
+        # Map telemetry to new 6-feature ML pipeline
+        telemetry = {
+            "avg_assessment_score": req.average_assessment_score,
+            "quiz_retry_ratio": max(1.0, 1.0 + float(req.missed_assessments_count) * 0.5),
+            "time_spent_per_lesson": 1.0,
+            "hint_request_frequency": 2.0,
+            "inactivity_days": float(req.days_since_last_active),
+            "score_trend_slope": req.score_trend_slope
+        }
+        res = risk_predictor.predict_risk(telemetry)
+        factor_strings = [f"{f['factor']} ({f['impact']}): {f['detail']}" for f in res["top_contributing_factors"]]
 
         return RiskPredictionResponse(
             student_id=req.student_id,
-            risk_level=risk_level,
-            risk_score=risk_score,
-            factors=factors,
-            intervention_recommendation=intervention
+            risk_level=res["risk_level"],
+            risk_score=res["risk_probability"],
+            factors=factor_strings,
+            intervention_recommendation=res["recommended_action"]
         )
     except Exception as e:
         logger.error(f"Risk prediction error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+# -------------------------------------------------------------------------
+# New Dedicated Advanced Endpoints: ML Risk, BKT, RAG, and CAT
+# -------------------------------------------------------------------------
+
+@app.post("/api/v1/ml/predict-risk")
+async def ml_predict_risk(data: dict):
+    """Predicts student dropout probability with Scikit-Learn Random Forest and SHAP attribution."""
+    try:
+        return risk_predictor.predict_risk(data)
+    except Exception as e:
+        logger.error(f"Predict risk error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/v1/ml/bkt/update")
+async def bkt_update(data: dict):
+    """Updates Bayesian Knowledge Tracing latent concept mastery P(L_t) after a quiz response."""
+    try:
+        current_p_l = float(data.get("current_p_l", 0.15))
+        is_correct = bool(data.get("is_correct", False))
+        custom_params = data.get("params", None)
+        return bkt_engine.update_mastery(current_p_l, is_correct, custom_params)
+    except Exception as e:
+        logger.error(f"BKT update error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/v1/ml/bkt/batch-trace")
+async def bkt_batch_trace(data: dict):
+    """Traces full progression trajectory of a multi-question quiz session."""
+    try:
+        responses = data.get("responses", [])
+        initial_p_l = data.get("initial_p_l", None)
+        return bkt_engine.trace_sequence(responses, initial_p_l)
+    except Exception as e:
+        logger.error(f"BKT trace error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/v1/rag/search")
+async def rag_search_verified_chunks(data: dict):
+    """Retrieves verified technical documentation chunks using hybrid search."""
+    try:
+        query = data.get("query", "")
+        top_k = int(data.get("top_k", 2))
+        return {
+            "query": query,
+            "chunks": rag_store.search_verified_chunks(query, top_k)
+        }
+    except Exception as e:
+        logger.error(f"RAG search error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/v1/cat/evaluate-response")
+async def cat_evaluate_response(data: dict):
+    """Computes updated student latent ability θ and standard error SE(θ) using 2PL IRT."""
+    try:
+        responses = data.get("responses", [])
+        current_theta = float(data.get("current_theta", 0.0))
+        return cat_engine.update_ability_estimate(responses, current_theta)
+    except Exception as e:
+        logger.error(f"CAT evaluation error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host=settings.HOST, port=settings.PORT, reload=settings.DEBUG)

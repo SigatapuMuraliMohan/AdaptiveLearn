@@ -20,60 +20,94 @@ public class StudentProfileService {
     private final LearningPathRepository pathRepository;
     private final AssessmentAttemptRepository attemptRepository;
     private final AiServiceClient aiServiceClient;
+    private final UserRepository userRepository;
+    private final LearningPreferenceRepository preferenceRepository;
 
     public StudentProfileService(StudentProfileRepository profileRepository,
                                  StudentSkillRepository studentSkillRepository,
                                  SkillRepository skillRepository,
                                  LearningPathRepository pathRepository,
                                  AssessmentAttemptRepository attemptRepository,
-                                 AiServiceClient aiServiceClient) {
+                                 AiServiceClient aiServiceClient,
+                                 UserRepository userRepository,
+                                 LearningPreferenceRepository preferenceRepository) {
         this.profileRepository = profileRepository;
         this.studentSkillRepository = studentSkillRepository;
         this.skillRepository = skillRepository;
         this.pathRepository = pathRepository;
         this.attemptRepository = attemptRepository;
         this.aiServiceClient = aiServiceClient;
+        this.userRepository = userRepository;
+        this.preferenceRepository = preferenceRepository;
     }
 
     public StudentProfile getProfileByEmail(String email) {
         return profileRepository.findByUserEmail(email)
-                .orElseThrow(() -> new IllegalArgumentException("Student profile not found for email: " + email));
+                .orElseGet(() -> {
+                    User user = userRepository.findByEmail(email)
+                            .orElseThrow(() -> new IllegalArgumentException("User not found for email: " + email));
+                    StudentProfile newProfile = new StudentProfile(user);
+                    return profileRepository.save(newProfile);
+                });
     }
 
     @Transactional
     public Map<String, Object> saveOnboardingAndGetDiagnostic(String email, OnboardingDTO.OnboardingRequest request) {
         StudentProfile profile = getProfileByEmail(email);
 
-        profile.setCurrentGoal(request.getGoal());
+        String safeGoal = (request.getGoal() != null && !request.getGoal().isBlank()) ? request.getGoal().trim() : "Java Backend Developer";
+        profile.setCurrentGoal(safeGoal);
         if (request.getStatedLevel() != null) {
             try {
                 profile.setCurrentLevel(StudentProfile.KnowledgeLevel.valueOf(request.getStatedLevel().toUpperCase()));
             } catch (Exception ignored) {}
         }
-        profile.setTargetOutcome(request.getTargetOutcome());
+        profile.setTargetOutcome(request.getTargetOutcome() != null ? request.getTargetOutcome() : "Master skills for " + safeGoal);
 
-        LearningPreference pref = profile.getLearningPreference();
-        if (pref == null) {
-            pref = new LearningPreference();
-            pref.setStudentProfile(profile);
-            profile.setLearningPreference(pref);
-        }
-        pref.setPreferredStyle(request.getPreferredStyle());
-        pref.setWeeklyHours(request.getWeeklyHours() != null ? request.getWeeklyHours() : 5);
+        LearningPreference pref = preferenceRepository.findByStudentProfileId(profile.getId())
+                .orElseGet(() -> {
+                    LearningPreference p = new LearningPreference();
+                    p.setStudentProfile(profile);
+                    return p;
+                });
+
+        pref.setPreferredStyle(request.getPreferredStyle() != null ? request.getPreferredStyle() : "hands-on with analogies");
+        pref.setWeeklyHours(request.getWeeklyHours() != null ? request.getWeeklyHours() : 8);
+
         if (request.getPacePreference() != null) {
-            try {
-                pref.setPacePreference(LearningPreference.PacePreference.valueOf(request.getPacePreference().toUpperCase()));
-            } catch (Exception ignored) {}
+            String paceStr = request.getPacePreference().toUpperCase();
+            if ("RELAXED".equals(paceStr)) {
+                pref.setPacePreference(LearningPreference.PacePreference.SLOW);
+            } else if ("INTENSIVE".equals(paceStr)) {
+                pref.setPacePreference(LearningPreference.PacePreference.FAST);
+            } else {
+                try {
+                    pref.setPacePreference(LearningPreference.PacePreference.valueOf(paceStr));
+                } catch (Exception ignored) {
+                    pref.setPacePreference(LearningPreference.PacePreference.MODERATE);
+                }
+            }
         }
 
+        preferenceRepository.save(pref);
+        profile.setLearningPreference(pref);
         profileRepository.save(profile);
 
         // Fetch Diagnostic Assessment from AI Service
-        Map<String, Object> diagnosticQuiz = aiServiceClient.generateDiagnosticAssessment(
-                profile.getCurrentGoal(),
-                profile.getCurrentLevel().name(),
-                pref.getWeeklyHours()
-        );
+        Map<String, Object> diagnosticQuiz = null;
+        try {
+            diagnosticQuiz = aiServiceClient.generateDiagnosticAssessment(
+                    safeGoal,
+                    profile.getCurrentLevel().name(),
+                    pref.getWeeklyHours()
+            );
+        } catch (Exception e) {
+            throw new RuntimeException("AI service failed to generate baseline diagnostic: " + e.getMessage(), e);
+        }
+
+        if (diagnosticQuiz == null || diagnosticQuiz.isEmpty() || !diagnosticQuiz.containsKey("questions")) {
+            throw new RuntimeException("AI service returned an empty or invalid diagnostic assessment response. Please try again.");
+        }
 
         return diagnosticQuiz;
     }

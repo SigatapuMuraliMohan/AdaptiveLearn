@@ -56,21 +56,44 @@ public class AssessmentService {
         LearningPathItem item = itemRepository.findById(itemId)
                 .orElseThrow(() -> new IllegalArgumentException("Path item not found"));
 
-        String difficulty = (String) options.getOrDefault("difficulty", item.getDifficultyLevel().name());
-        int mcqCount = ((Number) options.getOrDefault("mcqCount", 3)).intValue();
+        String difficulty = (String) options.getOrDefault("difficulty", options.getOrDefault("difficultyLevel", item.getDifficultyLevel().name()));
+        
+        int mcqCount = 3;
+        Object mcqRaw = options.get("mcqCount");
+        if (mcqRaw instanceof Number) {
+            mcqCount = ((Number) mcqRaw).intValue();
+        } else if (mcqRaw instanceof String) {
+            try {
+                mcqCount = Integer.parseInt((String) mcqRaw);
+            } catch (Exception ignored) {}
+        }
+
         boolean includeDescriptive = Boolean.TRUE.equals(options.getOrDefault("includeDescriptive", true));
         boolean includeCoding = Boolean.TRUE.equals(options.getOrDefault("includeCoding", false));
 
-        Map<String, Object> aiPayload = Map.of(
-                "topic_name", item.getTopicName(),
-                "course_goal", item.getLearningPath().getGoalText(),
-                "difficulty_level", difficulty,
-                "mcq_count", mcqCount,
-                "include_descriptive", includeDescriptive,
-                "include_coding", includeCoding
-        );
+        String topicName = item.getTopicName() != null ? item.getTopicName() : (item.getTitle() != null ? item.getTitle() : "Core Topic");
+        String courseGoal = (item.getLearningPath() != null && item.getLearningPath().getGoalText() != null)
+                ? item.getLearningPath().getGoalText() : "Course Mastery";
+        String safeDifficulty = difficulty != null ? difficulty : "INTERMEDIATE";
 
-        Map<String, Object> aiGen = aiServiceClient.generateCustomAssessment(aiPayload);
+        Map<String, Object> aiPayload = new HashMap<>();
+        aiPayload.put("topic_name", topicName);
+        aiPayload.put("course_goal", courseGoal);
+        aiPayload.put("difficulty_level", safeDifficulty);
+        aiPayload.put("mcq_count", mcqCount);
+        aiPayload.put("include_descriptive", includeDescriptive);
+        aiPayload.put("include_coding", includeCoding);
+
+        Map<String, Object> aiGen;
+        try {
+            aiGen = aiServiceClient.generateCustomAssessment(aiPayload);
+        } catch (Exception e) {
+            throw new RuntimeException("AI service failed to generate assessment for topic '" + topicName + "': " + e.getMessage(), e);
+        }
+
+        if (aiGen == null || aiGen.isEmpty() || !aiGen.containsKey("mcqs")) {
+            throw new RuntimeException("AI service returned an empty or invalid assessment response for topic: " + topicName);
+        }
 
         Assessment assessment = new Assessment();
         assessment.setPathItem(item);
@@ -134,10 +157,29 @@ public class AssessmentService {
         return assessmentRepository.save(assessment);
     }
 
-    public Assessment getAssessment(Long assessmentId) {
-        return assessmentRepository.findById(assessmentId)
-                .orElseThrow(() -> new IllegalArgumentException("Assessment not found"));
+    @Transactional
+    public Assessment getAssessment(Long id) {
+        // 1. Check if ID directly matches an Assessment ID
+        Optional<Assessment> directOpt = assessmentRepository.findById(id);
+        if (directOpt.isPresent()) {
+            return directOpt.get();
+        }
+
+        // 2. Check if ID represents a LearningPathItem ID that already has an Assessment
+        List<Assessment> itemAssessments = assessmentRepository.findByPathItemId(id);
+        if (itemAssessments != null && !itemAssessments.isEmpty()) {
+            return itemAssessments.get(itemAssessments.size() - 1);
+        }
+
+        // 3. Check if ID is a valid LearningPathItem ID; if so, generate assessment on the fly!
+        if (itemRepository.existsById(id)) {
+            return generateCustomAssessment(id, null, Map.of());
+        }
+
+        throw new IllegalArgumentException("Assessment or Course Item not found for ID: " + id);
     }
+
+
 
     @Transactional
     public Map<String, Object> submitAssessment(Long assessmentId, String email, Map<String, String> submittedAnswers) {

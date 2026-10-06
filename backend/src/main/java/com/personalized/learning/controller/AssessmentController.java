@@ -18,16 +18,16 @@ public class AssessmentController {
         this.assessmentService = assessmentService;
     }
 
-    @PostMapping("/generate-custom/{itemId}")
+    @PostMapping({"/generate-custom/{itemId}", "/generate/{itemId}"})
     public ResponseEntity<Assessment> generateCustomAssessment(
             Authentication authentication,
             @PathVariable Long itemId,
             @RequestBody(required = false) Map<String, Object> options) {
         Map<String, Object> safeOptions = (options != null) ? options : Map.of();
-        return ResponseEntity.ok(assessmentService.generateCustomAssessment(itemId, authentication.getName(), safeOptions));
+        return ResponseEntity.ok(assessmentService.generateCustomAssessment(itemId, authentication != null ? authentication.getName() : null, safeOptions));
     }
 
-    @GetMapping("/{assessmentId}")
+    @GetMapping({"/{assessmentId}", "/item/{assessmentId}"})
     public ResponseEntity<Assessment> getAssessment(@PathVariable Long assessmentId) {
         return ResponseEntity.ok(assessmentService.getAssessment(assessmentId));
     }

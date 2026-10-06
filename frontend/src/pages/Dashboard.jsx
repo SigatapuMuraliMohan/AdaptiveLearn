@@ -88,13 +88,6 @@ const Dashboard = () => {
     }
   };
 
-  const sampleGoals = [
-    'Java Backend Developer with Spring Boot & Microservices',
-    'IELTS Academic Preparation (Reading, Writing, Speaking)',
-    'Full Stack React, TypeScript & Node.js',
-    'Machine Learning & Deep Learning with Python'
-  ];
-
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
       
@@ -296,17 +289,14 @@ const Dashboard = () => {
                   placeholder="e.g. Distributed Systems Architecture & Kafka"
                   className="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-sm text-obsidian-base text-xs focus:outline-none focus:border-crimson-600 focus:ring-1 focus:ring-crimson-600"
                 />
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  {sampleGoals.map((sample) => (
-                    <button
-                      key={sample}
-                      type="button"
-                      onClick={() => setGoal(sample)}
-                      className="text-[11px] px-2 py-0.5 rounded-sm bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-crimson-700 border border-stroke-subtle transition-colors text-left"
-                    >
-                      + {sample}
-                    </button>
-                  ))}
+                <div className="mt-2 p-3 bg-slate-50 border border-stroke-subtle rounded-sm text-xs text-slate-600 leading-relaxed">
+                  <div className="font-bold text-obsidian-deep text-[11px] mb-0.5 flex items-center space-x-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-crimson-600"></span>
+                    <span>How to define your target:</span>
+                  </div>
+                  <p className="text-[11px] text-slate-600">
+                    Enter any skill, career objective, certification, or technology you want to master (e.g., <em>"Full Stack React & Spring Boot"</em>, <em>"Machine Learning with Python"</em>, <em>"Cloud Architecture & Kubernetes"</em>, or <em>"Data Structures & Algorithms"</em>). The AI curriculum engine will calibrate sequential milestone modules specifically for your target.
+                  </p>
                 </div>
               </div>
 

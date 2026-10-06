@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
 import java.util.Map;
+import java.util.HashMap;
 
 @Service
 public class AiServiceClient {
@@ -55,11 +56,10 @@ public class AiServiceClient {
     }
 
     public Map<String, Object> generateDiagnosticAssessment(String goal, String level, Integer weeklyHours) {
-        Map<String, Object> payload = Map.of(
-                "goal", goal,
-                "experience_level", level != null ? level : "BEGINNER",
-                "weekly_hours", weeklyHours != null ? weeklyHours : 8
-        );
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("goal", (goal != null && !goal.isBlank()) ? goal : "Software Engineering");
+        payload.put("experience_level", (level != null && !level.isBlank()) ? level : "BEGINNER");
+        payload.put("weekly_hours", weeklyHours != null ? weeklyHours : 8);
         return restClient.post()
                 .uri("/ai/generate-diagnostic-assessment")
                 .contentType(MediaType.APPLICATION_JSON)

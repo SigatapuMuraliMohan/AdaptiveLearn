@@ -15,6 +15,7 @@ D:\ai-personalized-education\backend\src\main\java\com\personalized\learning\mod
 D:\ai-personalized-education\backend\src\main\java\com\personalized\learning\model\LearningPath.java
 D:\ai-personalized-education\backend\src\main\java\com\personalized\learning\model\LearningPathItem.java
 D:\ai-personalized-education\backend\src\main\java\com\personalized\learning\model\LearningPreference.java
+D:\ai-personalized-education\backend\src\main\java\com\personalized\learning\model\PasswordResetOtp.java
 D:\ai-personalized-education\backend\src\main\java\com\personalized\learning\model\Question.java
 D:\ai-personalized-education\backend\src\main\java\com\personalized\learning\model\Recommendation.java
 D:\ai-personalized-education\backend\src\main\java\com\personalized\learning\model\RiskPrediction.java
@@ -31,6 +32,8 @@ D:\ai-personalized-education\backend\src\main\java\com\personalized\learning\rep
 D:\ai-personalized-education\backend\src\main\java\com\personalized\learning\repository\FeedbackRepository.java
 D:\ai-personalized-education\backend\src\main\java\com\personalized\learning\repository\LearningPathItemRepository.java
 D:\ai-personalized-education\backend\src\main\java\com\personalized\learning\repository\LearningPathRepository.java
+D:\ai-personalized-education\backend\src\main\java\com\personalized\learning\repository\LearningPreferenceRepository.java
+D:\ai-personalized-education\backend\src\main\java\com\personalized\learning\repository\PasswordResetOtpRepository.java
 D:\ai-personalized-education\backend\src\main\java\com\personalized\learning\repository\RecommendationRepository.java
 D:\ai-personalized-education\backend\src\main\java\com\personalized\learning\repository\RiskPredictionRepository.java
 D:\ai-personalized-education\backend\src\main\java\com\personalized\learning\repository\SkillRepository.java
@@ -44,5 +47,6 @@ D:\ai-personalized-education\backend\src\main\java\com\personalized\learning\sec
 D:\ai-personalized-education\backend\src\main\java\com\personalized\learning\service\AiTutorService.java
 D:\ai-personalized-education\backend\src\main\java\com\personalized\learning\service\AssessmentService.java
 D:\ai-personalized-education\backend\src\main\java\com\personalized\learning\service\AuthService.java
+D:\ai-personalized-education\backend\src\main\java\com\personalized\learning\service\EmailService.java
 D:\ai-personalized-education\backend\src\main\java\com\personalized\learning\service\LearningPathService.java
 D:\ai-personalized-education\backend\src\main\java\com\personalized\learning\service\StudentProfileService.java

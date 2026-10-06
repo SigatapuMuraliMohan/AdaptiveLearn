@@ -96,6 +96,34 @@ const AssessmentRunner = () => {
 
   const questions = assessment?.questions || [];
 
+  if (!assessment || questions.length === 0) {
+    return (
+      <div className="max-w-2xl mx-auto px-4 py-16 text-center space-y-6">
+        <div className="architectural-card p-10 bg-white border border-stroke-subtle shadow-card space-y-4">
+          <AlertCircle className="w-10 h-10 text-crimson-600 mx-auto" />
+          <h2 className="text-xl font-bold text-obsidian-deep">Assessment Verification Initializing</h2>
+          <p className="text-xs text-slate-600 leading-relaxed">
+            {error || "The assessment for this module is being prepared or was not loaded yet."}
+          </p>
+          <div className="pt-2 flex justify-center space-x-3">
+            <button
+              onClick={() => navigate(-1)}
+              className="px-4 py-2 rounded-sm bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold"
+            >
+              Back to Lecture
+            </button>
+            <button
+              onClick={fetchAssessment}
+              className="px-5 py-2 rounded-sm bg-crimson-600 hover:bg-crimson-700 text-white text-xs font-bold uppercase tracking-wider"
+            >
+              Generate / Load Assessment
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-4xl mx-auto px-4 py-10 space-y-8">
       
@@ -140,19 +168,25 @@ const AssessmentRunner = () => {
           <div className="space-y-6">
             {questions.map((q, idx) => {
               let options = [];
-              try {
-                options = q.optionsJson ? JSON.parse(q.optionsJson) : [];
-              } catch (e) {
-                options = [];
+              if (Array.isArray(q.optionsJson)) {
+                options = q.optionsJson;
+              } else if (typeof q.optionsJson === 'string') {
+                try {
+                  const parsed = JSON.parse(q.optionsJson);
+                  options = Array.isArray(parsed) ? parsed : [];
+                } catch (e) {
+                  options = [];
+                }
               }
+              const safeOptions = Array.isArray(options) ? options : [];
 
               return (
-                <div key={q.id} className="p-6 rounded-sm bg-slate-50 border border-stroke-subtle space-y-4">
+                <div key={q.id || idx} className="p-6 rounded-sm bg-slate-50 border border-stroke-subtle space-y-4">
                   <div className="flex items-center justify-between">
                     <span className="text-[11px] font-mono font-bold text-crimson-600 uppercase tracking-wider">
                       Question 0{idx + 1} ({q.questionType})
                     </span>
-                    <span className="text-xs font-mono text-slate-500">{q.points} pt(s)</span>
+                    <span className="text-xs font-mono text-slate-500">{q.points || 1} pt(s)</span>
                   </div>
 
                   <h3 className="text-sm sm:text-base font-bold text-obsidian-deep leading-relaxed whitespace-pre-line">
@@ -162,7 +196,7 @@ const AssessmentRunner = () => {
                   {/* MCQ Selector */}
                   {q.questionType === 'MCQ' && (
                     <div className="space-y-2 pt-2">
-                      {options.map((opt, oIdx) => {
+                      {safeOptions.map((opt, oIdx) => {
                         const isSelected = answers[q.id] === opt;
                         return (
                           <div

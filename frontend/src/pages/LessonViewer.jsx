@@ -6,6 +6,7 @@ import api from '../api/client';
 import {
   BookOpen,
   ArrowLeft,
+  ArrowRight,
   CheckCircle2,
   Terminal,
   Send,
@@ -48,6 +49,7 @@ const LessonViewer = () => {
   // Assessment Modal State
   const [showAssessmentModal, setShowAssessmentModal] = useState(false);
   const [generatingQuiz, setGeneratingQuiz] = useState(false);
+  const [modalError, setModalError] = useState('');
   const [mcqCount, setMcqCount] = useState(3);
   const [includeDescriptive, setIncludeDescriptive] = useState(true);
   const [includeCoding, setIncludeCoding] = useState(true);
@@ -142,17 +144,26 @@ const LessonViewer = () => {
 
   const handleStartCustomAssessment = async () => {
     setGeneratingQuiz(true);
+    setModalError('');
     try {
-      const res = await api.post(`/assessments/generate/${itemId}`, {
+      const res = await api.post(`/assessments/generate-custom/${itemId}`, {
         difficultyLevel: quizDifficulty,
         mcqCount: parseInt(mcqCount),
         includeDescriptive,
         includeCoding
       });
 
-      navigate(`/assessment/${res.data.id}`);
+      if (res.data?.id) {
+        setShowAssessmentModal(false);
+        navigate(`/assessment/${res.data.id}`);
+      } else {
+        setModalError('AI service returned an invalid assessment ID.');
+      }
     } catch (err) {
       console.error(err);
+      const msg = err.response?.data?.message || err.response?.data?.error || err.message || 'Failed to generate assessment. Please check AI service status.';
+      setModalError(msg);
+    } finally {
       setGeneratingQuiz(false);
     }
   };
@@ -501,6 +512,12 @@ const LessonViewer = () => {
                   <span className="text-slate-700 font-semibold">Include Practical Code Sandbox Problem</span>
                 </label>
               </div>
+
+              {modalError && (
+                <div className="p-3 bg-crimson-50 border border-crimson-200 text-crimson-700 text-xs rounded-sm">
+                  {modalError}
+                </div>
+              )}
 
               <div className="pt-2 flex justify-end space-x-2">
                 <button
